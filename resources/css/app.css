@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* resources/css/app.css */
+.pagination .page-link {
+    @apply bg-main-bg text-white rounded-md;
+}
+.pagination .page-link:hover {
+    @apply bg-main-bg/80;
+}
+.pagination .active .page-link {
+    @apply bg-main-bg text-white;
+}
