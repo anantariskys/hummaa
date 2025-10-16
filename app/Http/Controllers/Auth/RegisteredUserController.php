@@ -35,6 +35,9 @@ class RegisteredUserController extends Controller
                 'password' => Hash::make($request->password),
             ]);
 
+               // ✅ Langsung tandai email user sebagai terverifikasi
+            $user->markEmailAsVerified();
+
             event(new Registered($user));
             Auth::login($user);
 
