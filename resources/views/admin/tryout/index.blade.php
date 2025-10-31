@@ -11,7 +11,7 @@
             <div class="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
                 <h2 class="text-2xl font-bold text-gray-900">Daftar Try Out</h2>
                 <div class="flex gap-2">
-                    <form action="{{ route('admin.tryout') }}" method="GET" class="flex">
+ <form action="{{ route('admin.tryout.index') }}" method="GET" class="flex">
                         <input type="text" name="search" value="{{ $search ?? '' }}"
                                placeholder="Cari try out..."
                                class="rounded-l-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none ">

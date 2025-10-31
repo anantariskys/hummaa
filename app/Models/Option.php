@@ -9,19 +9,18 @@ class Option extends Model
 {
     use HasFactory;
 
-    /**
-     * Tentukan primary key kustom.
-     */
-    protected $primaryKey = 'option_id';
-
     protected $fillable = [
         'question_id',
         'option_text',
         'is_correct',
     ];
 
+    protected $casts = [
+        'is_correct' => 'boolean',
+    ];
+
     /**
-     * Satu opsi jawaban dimiliki oleh satu soal.
+     * Option belongs to a question
      */
     public function question()
     {

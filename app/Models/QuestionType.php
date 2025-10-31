@@ -9,17 +9,14 @@ class QuestionType extends Model
 {
     use HasFactory;
 
+    public $timestamps = false;
+    
     protected $fillable = [
-        'type',
+        'type', 
     ];
 
     /**
-     * Tabel ini tidak memiliki kolom created_at dan updated_at.
-     */
-    public $timestamps = false;
-
-    /**
-     * Satu tipe soal dimiliki oleh banyak soal.
+     * Question type has many questions
      */
     public function questions()
     {

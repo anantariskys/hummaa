@@ -8,6 +8,7 @@ use App\Http\Controllers\DiscussionController;
 use App\Http\Controllers\DiscussionCommentarController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\TryoutController;
+use App\Http\Controllers\Admin\AdminTryoutController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -38,35 +39,44 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     //Admin Page
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
-        Route::prefix('materials')->group(function () {
-            Route::get('/', [MateriController::class, 'indexAdmin'])->name('materials');
-            Route::get('/create', [MateriController::class, 'create'])->name('materials.create');
-            Route::post('/', [MateriController::class, 'store'])->name('materials.store');
-            Route::get('/{material}/edit', [MateriController::class, 'edit'])->name('materials.edit');
-            Route::put('/{material}', [MateriController::class, 'update'])->name('materials.update');
-            Route::delete('/{material}', [MateriController::class, 'destroy'])->name('materials.destroy');
-        });
-
-        Route::prefix('tryout')->group(function () {
-            Route::get('/', [TryoutController::class, 'indexAdmin'])->name('tryout');
-            Route::get('/create', [TryoutController::class, 'create'])->name('tryout.create');
-            Route::post('/', [TryoutController::class, 'store'])->name('tryout.store');
-            Route::get('/{tryout}', [TryoutController::class, 'show'])->name('tryout.show');
-            Route::get('/{tryout}/edit', [TryoutController::class, 'edit'])->name('tryout.edit');
-            Route::put('/{tryout}', [TryoutController::class, 'update'])->name('tryout.update');
-            Route::delete('/{tryout}', [TryoutController::class, 'destroy'])->name('tryout.destroy');
-        });
-
-        Route::prefix('questions')->group(function () {
-            Route::get('/', [QuestionController::class, 'index'])->name('questions');
-            Route::get('/create', [QuestionController::class, 'create'])->name('questions.create');
-            Route::post('/', [QuestionController::class, 'store'])->name('questions.store');
-            Route::get('/{question}', [QuestionController::class, 'show'])->name('questions.show');
-            Route::get('/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
-            Route::put('/{question}', [QuestionController::class, 'update'])->name('questions.update');
-            Route::delete('/{question}', [QuestionController::class, 'destroy'])->name('questions.destroy');
-        });
+    Route::prefix('materials')->group(function () {
+        Route::get('/', [MateriController::class, 'indexAdmin'])->name('materials');
+        Route::get('/create', [MateriController::class, 'create'])->name('materials.create');
+        Route::post('/', [MateriController::class, 'store'])->name('materials.store');
+        Route::get('/{material}/edit', [MateriController::class, 'edit'])->name('materials.edit');
+        Route::put('/{material}', [MateriController::class, 'update'])->name('materials.update');
+        Route::delete('/{material}', [MateriController::class, 'destroy'])->name('materials.destroy');
     });
+
+    Route::prefix('tryout')->group(function () {
+    Route::get('/', [AdminTryoutController::class, 'index'])->name('tryout.index');
+    Route::get('/create', [AdminTryoutController::class, 'create'])->name('tryout.create');
+    Route::post('/', [AdminTryoutController::class, 'store'])->name('tryout.store');
+    Route::get('/{tryout_id}', [AdminTryoutController::class, 'show'])->name('tryout.show');
+    Route::get('/{tryout_id}/edit', [AdminTryoutController::class, 'edit'])->name('tryout.edit');
+    Route::put('/{tryout_id}', [AdminTryoutController::class, 'update'])->name('tryout.update');
+    Route::delete('/{tryout_id}', [AdminTryoutController::class, 'destroy'])->name('tryout.destroy');
+    
+    // Routes untuk manajemen soal
+    Route::prefix('{tryout_id}/questions')->name('tryout.questions.')->group(function () {
+        Route::get('/create', [AdminTryoutController::class, 'createQuestion'])->name('create');
+        Route::post('/', [AdminTryoutController::class, 'storeQuestion'])->name('store');
+        Route::get('/{question_id}/edit', [AdminTryoutController::class, 'editQuestion'])->name('edit');
+        Route::put('/{question_id}', [AdminTryoutController::class, 'updateQuestion'])->name('update');
+        Route::delete('/{question_id}', [AdminTryoutController::class, 'destroyQuestion'])->name('destroy');
+    });
+});
+
+    Route::prefix('questions')->group(function () {
+        Route::get('/', [QuestionController::class, 'index'])->name('questions');
+        Route::get('/create', [QuestionController::class, 'create'])->name('questions.create');
+        Route::post('/', [QuestionController::class, 'store'])->name('questions.store');
+        Route::get('/{question}', [QuestionController::class, 'show'])->name('questions.show');
+        Route::get('/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
+        Route::put('/{question}', [QuestionController::class, 'update'])->name('questions.update');
+        Route::delete('/{question}', [QuestionController::class, 'destroy'])->name('questions.destroy');
+    });
+});
 
 
     //User Page
