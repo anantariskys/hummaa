@@ -23,10 +23,10 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // $this->call([
-        //     QuestionBankCategorySeeder::class,
-        //     MateriSeeder::class,
-        //     DummyTryoutSeeder::class,
-        // ]);
+        $this->call([
+            QuestionBankCategorySeeder::class,
+            MateriSeeder::class,
+            DummyTryoutSeeder::class,
+        ]);
     }
 }
