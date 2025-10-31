@@ -41,6 +41,7 @@ class AdminTryoutController extends Controller
     public function create()
     {
         $categories = QuestionBankCategory::all();
+        // dd($categories);
         return view('admin.tryout.create', compact('categories'));
     }
 
@@ -158,6 +159,8 @@ class AdminTryoutController extends Controller
     public function storeQuestion(Request $request, $tryout_id)
     {
         $tryout = Tryout::where('tryout_id', $tryout_id)->firstOrFail();
+
+
         
         $rules = [
             'question_text' => 'required|string',
@@ -172,7 +175,7 @@ class AdminTryoutController extends Controller
         $questionType = QuestionType::find($request->question_type_id);
         
         // Add validation for multiple choice options
-        if ($questionType && $questionType->type === 'multiple_choice') {
+        if ($questionType && $questionType->type === 'Pilihan Ganda') {
             $rules['options'] = 'required|array|min:2';
             $rules['options.*.option_text'] = 'required|string';
             $rules['options.*.is_correct'] = 'required|boolean';
@@ -199,7 +202,7 @@ class AdminTryoutController extends Controller
             $question = Question::create($questionData);
             
             // Create options for multiple choice
-            if ($questionType && $questionType->type === 'multiple_choice' && isset($validated['options'])) {
+            if ($questionType && $questionType->type === 'Pilihan Ganda' && isset($validated['options'])) {
                 foreach ($validated['options'] as $option) {
                     Option::create([
                         'question_id' => $question->question_id,
@@ -240,6 +243,7 @@ class AdminTryoutController extends Controller
         $tryout = Tryout::where('tryout_id', $tryout_id)->firstOrFail();
         $question = Question::where('question_id', $question_id)->with('options')->firstOrFail();
         
+        
         // Get question number from pivot table
         $tryoutQuestion = TryoutQuestion::where('tryout_id', $tryout->tryout_id)
             ->where('question_id', $question->question_id)
@@ -277,7 +281,7 @@ class AdminTryoutController extends Controller
         $questionType = QuestionType::find($request->question_type_id);
         
         // Add validation for multiple choice options
-        if ($questionType && $questionType->type === 'multiple_choice') {
+        if ($questionType && $questionType->type === 'Pilihan Ganda') {
             $rules['options'] = 'required|array|min:2';
             $rules['options.*.option_text'] = 'required|string';
             $rules['options.*.is_correct'] = 'required|boolean';
@@ -301,7 +305,7 @@ class AdminTryoutController extends Controller
             ]);
             
             // Update options for multiple choice
-            if ($questionType && $questionType->type === 'multiple_choice' && isset($validated['options'])) {
+            if ($questionType && $questionType->type === 'Pilihan Ganda' && isset($validated['options'])) {
                 // Delete old options
                 Option::where('question_id', $question->question_id)->delete();
                 
