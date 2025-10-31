@@ -10,7 +10,7 @@
         <div class="bg-white p-6 md:p-8">
             <div class="mb-6 flex items-center justify-between">
                 <h2 class="text-2xl font-bold text-gray-900">{{ $tryout->title }}</h2>
-                <a href="{{ route('admin.tryout') }}"
+                <a href="{{ route('admin.tryout.index') }}"
                    class="inline-flex items-center rounded-lg bg-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-300">
                     Kembali
                 </a>
@@ -31,9 +31,27 @@
                 </div>
             </div>
 
+            {{-- Success Message --}}
+            @if(session('success'))
+                <div class="mb-4 rounded-lg bg-green-50 p-4">
+                    <p class="text-sm text-green-600">{{ session('success') }}</p>
+                </div>
+            @endif
+
+            {{-- Error Message --}}
+            @if($errors->any())
+                <div class="mb-4 rounded-lg bg-red-50 p-4">
+                    <ul class="list-disc list-inside text-sm text-red-600">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             <div class="mb-6 flex items-center justify-between">
                 <h3 class="text-xl font-bold text-gray-900">Daftar Soal</h3>
-                <a href="{{ route('admin.tryout', $tryout->tryout_id) }}"
+                <a href="{{ route('admin.tryout.questions.create', $tryout->tryout_id) }}"
                    class="inline-flex items-center rounded-lg bg-main-bg px-4 py-2 text-white hover:bg-main-bg/80">
                     Tambah Soal
                 </a>
@@ -50,25 +68,29 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 bg-white">
-                        @forelse ($questions as $index => $question)
+                        @forelse ($questions as $question)
                             <tr>
-                                <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">{{ $questions->firstItem() + $index }}</td>
+                                <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+                                    {{ $question->question_number }}
+                                </td>
                                 <td class="px-6 py-4 text-sm text-gray-900">{{ Str::limit($question->question_text, 80) }}</td>
                                 <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                                    {{ $question->question_type === 'multiple_choice' ? 'Pilihan Ganda' : 'Essay' }}
+                                    {{ $question->questionType ? ucfirst(str_replace('_', ' ', $question->questionType->type)) : '-' }}
                                 </td>
                                 <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
                                     <div class="flex space-x-2">
-                                        <a href="{{ route('admin.tryout', [$tryout->tryout_id, $question->question_id]) }}"
+                                        <a href="{{ route('admin.tryout.questions.edit', [$tryout->tryout_id, $question->question_id]) }}"
                                            class="rounded bg-yellow-500 px-3 py-1 text-xs font-medium text-white hover:bg-yellow-600">
                                             Edit
                                         </a>
-                                        <form action="{{ route('admin.tryout', [$tryout->tryout_id, $question->question_id]) }}" method="POST" class="inline">
+                                        <form action="{{ route('admin.tryout.questions.destroy', [$tryout->tryout_id, $question->question_id]) }}" 
+                                              method="POST" 
+                                              class="inline"
+                                              onsubmit="return confirm('Yakin ingin menghapus soal ini?')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit"
-                                                    class="rounded bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700"
-                                                    onclick="return confirm('Yakin ingin menghapus soal ini?')">
+                                                    class="rounded bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700">
                                                 Hapus
                                             </button>
                                         </form>
@@ -85,10 +107,13 @@
                     </tbody>
                 </table>
             </div>
-              {{-- pagination link --}}
-            <div class="mt-4">
-                {{ $questions->withQueryString()->links() }}
-            </div>
+            
+            {{-- Pagination link --}}
+            @if($questions->hasPages())
+                <div class="mt-4">
+                    {{ $questions->links() }}
+                </div>
+            @endif
         </div>
     </div>
 </x-app-layout>

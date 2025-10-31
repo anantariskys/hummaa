@@ -60,7 +60,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="{{ route('admin.tryout') }}"
+                        <a href="{{ route('admin.tryout.index') }}"
                             class="font-semibold transition-colors duration-300 rounded-lg px-4 py-2
                     {{ request()->routeIs('admin.tryouts*') ? 'bg-main-bg text-white' : 'text-gray-700 hover:text-main-bg' }}">
                             Try Out

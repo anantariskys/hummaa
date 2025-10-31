@@ -2,14 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\QuestionBankCategory;
-use Illuminate\Http\Request;
 use App\Models\Tryout;
 use App\Models\TryoutAttempt;
 use App\Models\UserAnswer;
 use App\Models\Question;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -30,7 +28,6 @@ class TryoutController extends Controller
             'status' => 'in_progress',
         ]);
 
-        // Kode di bawah ini untuk mengambil dan memformat soal tidak perlu diubah
         $questions = $tryout
             ->questions()
             ->with(['options', 'questionType'])
@@ -146,6 +143,9 @@ class TryoutController extends Controller
         }
     }
 
+    /**
+     * Menampilkan hasil tryout.
+     */
     public function showResult($attempt_id)
     {
         $attempt = TryoutAttempt::with('tryout')->findOrFail($attempt_id);
@@ -159,12 +159,19 @@ class TryoutController extends Controller
         ]);
     }
 
+    /**
+     * Review mode - melihat jawaban yang sudah dikerjakan.
+     */
     public function review($tryout_id)
     {
         $user = Auth::user();
         $tryout = Tryout::findOrFail($tryout_id);
 
-        $latestAttempt = TryoutAttempt::where('user_id', $user->id)->where('tryout_id', $tryout_id)->where('status', 'submitted')->latest('updated_at')->first();
+        $latestAttempt = TryoutAttempt::where('user_id', $user->id)
+            ->where('tryout_id', $tryout_id)
+            ->where('status', 'submitted')
+            ->latest('updated_at')
+            ->first();
 
         if (!$latestAttempt) {
             return redirect()->route('bank-soal.index')->with('error', 'Anda harus menyelesaikan mode tryout terlebih dahulu sebelum masuk ke mode belajar.');
@@ -209,13 +216,12 @@ class TryoutController extends Controller
         ]);
     }
 
-    // Tambahkan metode ini di TryoutController Anda
-
+    /**
+     * Learning mode - mengerjakan soal tanpa menyimpan jawaban.
+     */
     public function startLearningMode($tryout_id)
     {
         $tryout = Tryout::with(['questions.options', 'questions.questionType'])->findOrFail($tryout_id);
-
-        // 1. KITA TIDAK MENGAMBIL JAWABAN LAMA DARI DATABASE
 
         $formattedQuestions = $tryout->questions->map(function ($q, $index) {
             return [
@@ -233,130 +239,35 @@ class TryoutController extends Controller
             ];
         });
 
-        // 2. BUAT SEBUAH OBJECT ATTEMPT PALSU ATAU SEDERHANA HANYA UNTUK VIEW
-        // Ini agar view Anda tidak error karena $attempt tidak ada.
         $mockAttempt = (object) [
-            'attempt_id' => 0, // ID 0 atau null, karena ini bukan attempt sungguhan
+            'attempt_id' => 0,
         ];
 
         return view('tryout.tryout-page', [
             'tryout' => $tryout,
-            'attempt' => $mockAttempt, // Menggunakan attempt palsu
+            'attempt' => $mockAttempt,
             'questions' => $formattedQuestions,
-            'userAnswers' => [], // 3. KIRIM ARRAY KOSONG SEBAGAI userAnswers
+            'userAnswers' => [],
         ]);
     }
 
+    /**
+     * Menampilkan riwayat pengerjaan tryout.
+     */
     public function showHistory($tryout_id)
     {
-        // 1. Ambil informasi tryout berdasarkan ID
         $tryout = Tryout::findOrFail($tryout_id);
-
-        // 2. Ambil pengguna yang sedang login
         $user = Auth::user();
 
-        // 3. Ambil semua riwayat pengerjaan (attempts) yang relevan dari database
         $attempts = TryoutAttempt::where('user_id', $user->id)
             ->where('tryout_id', $tryout->tryout_id)
-            ->where('status', 'submitted') // Hanya tampilkan yang sudah selesai
-            ->orderBy('end_time', 'desc') // Urutkan dari yang terbaru
+            ->where('status', 'submitted')
+            ->orderBy('end_time', 'desc')
             ->get();
 
-        // 4. Kirim data ke view baru
         return view('tryout.tryout-history', [
             'tryout' => $tryout,
             'attempts' => $attempts,
         ]);
-    }
-
-
-    public function indexAdmin(Request $request)
-    {
-        $search = $request->input('search');
-
-        $query = Tryout::with('category');
-        
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', '%' . $search . '%');
-            });
-        }
-
-        // paginate 10 per halaman
-        $allTryout = $query->paginate(10);
-
-        return view('admin.tryout.index', compact('allTryout', 'search'));
-    }
-
-    public function create()
-    {
-        $categories = QuestionBankCategory::all();
-        return view('admin.tryout.create', compact('categories'));
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'year' => 'required|integer|min:' . date('Y'),
-            'duration_minutes' => 'required|integer|min:1',
-            'category_id' => 'required|exists:question_bank_categories,id',
-        ]);
-
-        Tryout::create([
-            'title' => $request->title,
-            'year' => $request->year,
-            'duration_minutes' => $request->duration_minutes,
-            'category_id' => $request->category_id,
-        ]);
-
-        return redirect()->route('admin.tryout')->with('success', 'Try Out berhasil ditambahkan!');
-    }
-
-    public function edit(Tryout $tryout)
-    {
-        $categories = QuestionBankCategory::all();
-        
-        return view('admin.tryout.edit', compact('tryout', 'categories'));
-    }
-    
-
-    public function update(Request $request, Tryout $tryout)
-    {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'year' => 'required|integer|min:' . date('Y'),
-            'duration_minutes' => 'required|integer|min:1',
-            'category_id' => 'required|exists:question_bank_categories,id',
-        ]);
-
-        $tryout->update([
-            'title' => $request->title,
-            'year' => $request->year,
-            'duration_minutes' => $request->duration_minutes,
-            'category_id' => $request->category_id,
-        ]);
-
-        return redirect()->route('admin.tryout')->with('success', 'Try Out berhasil diperbarui!');
-    }
-
-    public function destroy(Tryout $tryout)
-    {
-        $tryout->delete();
-        return redirect()->route('admin.tryout')->with('success', 'Try Out berhasil dihapus!');
-    }
-
-    public function show(Tryout $tryout, Request $request)
-    {
-        // 1. Ambil informasi tryout berdasarkan ID
-        $tryout = Tryout::with('questions')->findOrFail($tryout->tryout_id);
-
-        // 2. Paginate questions
-        $questions = $tryout->questions()->paginate(10);
-
-        return view('admin.tryout.show', compact('tryout', 'questions'));
     }
 }
