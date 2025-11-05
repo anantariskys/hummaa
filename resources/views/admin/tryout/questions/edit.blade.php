@@ -9,7 +9,10 @@
     <div class="container mx-auto px-4 sm:px-6 md:py-2 lg:px-8">
         <div class="bg-white p-6 md:p-8">
             <div class="mb-6 flex items-center justify-between">
-                <h2 class="text-2xl font-bold text-gray-900">{{ $tryout->title }}</h2>
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">{{ $tryout->title }}</h2>
+                    <p class="text-sm text-gray-600 mt-1">Kategori: <span class="font-semibold">{{ $tryout->category->name }}</span></p>
+                </div>
                 <a href="{{ route('admin.tryout.show', $tryout->tryout_id) }}"
                     class="inline-flex items-center rounded-lg bg-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-300">
                     Kembali
@@ -35,25 +38,9 @@
                     <div>
                         <label for="question_number" class="block text-sm font-medium text-gray-700">Nomor Soal</label>
                         <input type="number" name="question_number" id="question_number"
-                            value="{{ old('question_number', $question->question_number) }}"
+                            value="{{ old('question_number', $questionNumber) }}"
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-main-bg focus:ring-main-bg"
                             required min="1">
-                    </div>
-
-                    <!-- Kategori -->
-                    <div>
-                        <label for="category_id" class="block text-sm font-medium text-gray-700">Kategori</label>
-                        <select name="category_id" id="category_id"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-main-bg focus:ring-main-bg"
-                            required>
-                            <option value="">Pilih Kategori</option>
-                            @foreach ($categories as $category)
-                                <option value="{{ $category->id }}"
-                                    {{ old('category_id', $question->category_id) == $category->id ? 'selected' : '' }}>
-                                    {{ $category->name }}
-                                </option>
-                            @endforeach
-                        </select>
                     </div>
 
                     <!-- Tipe Soal -->
@@ -132,13 +119,16 @@
                             class="mt-2 rounded-lg bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700">
                             + Tambah Opsi
                         </button>
+                        <p class="mt-2 text-sm text-gray-600">*Centang kotak "Benar" pada jawaban yang benar</p>
                     </div>
 
                     <!-- Jawaban Essay -->
                     <div id="essay-answer" style="display: none;">
-                        <label for="correct_answer_text" class="block text-sm font-medium text-gray-700">Jawaban (untuk Essay)</label>
-                        <textarea name="correct_answer_text" id="correct_answer_text" rows="3"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-main-bg focus:ring-main-bg">{{ old('correct_answer_text', $question->correct_answer_text) }}</textarea>
+                        <label for="correct_answer_text" class="block text-sm font-medium text-gray-700">Kunci Jawaban</label>
+                        <textarea name="correct_answer_text" id="correct_answer_text" rows="4"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-main-bg focus:ring-main-bg"
+                            placeholder="Masukkan kunci jawaban untuk soal essay ini...">{{ old('correct_answer_text', $question->correct_answer_text) }}</textarea>
+                        <p class="mt-1 text-sm text-gray-600">*Jawaban ini akan digunakan sebagai referensi untuk penilaian</p>
                     </div>
 
                     <!-- Pembahasan -->
@@ -165,26 +155,55 @@
     <script>
         let optionCount = {{ $question->options ? $question->options->count() : 0 }};
 
-        // Toggle tipe soal
-        document.getElementById('question_type_id').addEventListener('change', function() {
-            const selectedOption = this.options[this.selectedIndex];
+        function toggleQuestionType() {
+            const questionTypeSelect = document.getElementById('question_type_id');
+            const selectedOption = questionTypeSelect.options[questionTypeSelect.selectedIndex];
             const typeName = selectedOption.getAttribute('data-type');
 
             const optionsContainer = document.getElementById('options-container');
             const essayAnswer = document.getElementById('essay-answer');
+            const essayTextarea = document.getElementById('correct_answer_text');
 
-            if (typeName === 'Pilihan Ganda') {
+            console.log('Type selected:', typeName); // Debug
+
+            // Check for "multiple_choice" and "essay" (sesuai database)
+            if (typeName === 'multiple_choice') {
+                console.log('Showing multiple choice options'); // Debug
+                
+                // Show options, hide essay
                 optionsContainer.style.display = 'block';
                 essayAnswer.style.display = 'none';
-                if (optionCount === 0) {
+                
+                // Remove required from essay
+                essayTextarea.removeAttribute('required');
+                
+                // Add initial options if empty
+                const currentOptions = document.querySelectorAll('.option-item').length;
+                if (currentOptions === 0) {
+                    addOption();
+                    addOption();
                     addOption();
                     addOption();
                 }
-            } else {
+            } else if (typeName === 'essay') {
+                console.log('Showing essay answer'); // Debug
+                
+                // Show essay, hide options
                 optionsContainer.style.display = 'none';
                 essayAnswer.style.display = 'block';
+                
+                // Add required to essay
+                essayTextarea.setAttribute('required', 'required');
+            } else {
+                // Default: hide both
+                optionsContainer.style.display = 'none';
+                essayAnswer.style.display = 'none';
+                essayTextarea.removeAttribute('required');
             }
-        });
+        }
+
+        // Toggle tipe soal
+        document.getElementById('question_type_id').addEventListener('change', toggleQuestionType);
 
         // Tambah opsi
         document.getElementById('add-option-btn').addEventListener('click', function() {
@@ -228,7 +247,7 @@
             const optionItem = button.closest('.option-item');
             optionItem.remove();
             const remaining = document.querySelectorAll('.option-item').length;
-            if (remaining < 2) {
+            if (remaining < 2 && document.getElementById('options-container').style.display === 'block') {
                 alert('Minimal harus ada 2 opsi jawaban!');
                 addOption();
             }
@@ -236,8 +255,7 @@
 
         // Tampilkan sesuai tipe soal saat halaman pertama kali dimuat
         document.addEventListener('DOMContentLoaded', function() {
-            const questionTypeSelect = document.getElementById('question_type_id');
-            questionTypeSelect.dispatchEvent(new Event('change'));
+            toggleQuestionType();
         });
     </script>
 </x-app-layout>
