@@ -41,7 +41,6 @@ class AdminTryoutController extends Controller
     public function create()
     {
         $categories = QuestionBankCategory::all();
-        // dd($categories);
         return view('admin.tryout.create', compact('categories'));
     }
 
@@ -136,7 +135,7 @@ class AdminTryoutController extends Controller
      */
     public function createQuestion($tryout_id)
     {
-        $tryout = Tryout::where('tryout_id', $tryout_id)->firstOrFail();
+        $tryout = Tryout::with('category')->where('tryout_id', $tryout_id)->firstOrFail();
         
         // Get next question number
         $maxNumber = TryoutQuestion::where('tryout_id', $tryout->tryout_id)
@@ -147,10 +146,7 @@ class AdminTryoutController extends Controller
         // Get question types
         $questionTypes = QuestionType::all();
         
-        // Get categories
-        $categories = QuestionBankCategory::all();
-        
-        return view('admin.tryout.questions.create', compact('tryout', 'nextQuestionNumber', 'questionTypes', 'categories'));
+        return view('admin.tryout.questions.create', compact('tryout', 'nextQuestionNumber', 'questionTypes'));
     }
 
     /**
@@ -159,13 +155,10 @@ class AdminTryoutController extends Controller
     public function storeQuestion(Request $request, $tryout_id)
     {
         $tryout = Tryout::where('tryout_id', $tryout_id)->firstOrFail();
-
-
         
         $rules = [
             'question_text' => 'required|string',
             'question_type_id' => 'required|exists:question_types,id',
-            'category_id' => 'required|exists:question_bank_categories,id',
             'question_number' => 'required|integer|min:1',
             'explanation' => 'nullable|string',
             'image_url' => 'nullable|url',
@@ -174,13 +167,14 @@ class AdminTryoutController extends Controller
         // Get question type to check if multiple choice
         $questionType = QuestionType::find($request->question_type_id);
         
-        // Add validation for multiple choice options
-        if ($questionType && $questionType->type === 'Pilihan Ganda') {
+        // Add validation - sesuaikan dengan nilai di database: "multiple_choice" dan "essay"
+        if ($questionType && $questionType->type === 'multiple_choice') {
             $rules['options'] = 'required|array|min:2';
             $rules['options.*.option_text'] = 'required|string';
             $rules['options.*.is_correct'] = 'required|boolean';
-        } else {
-            $rules['correct_answer_text'] = 'nullable|string';
+        } else if ($questionType && $questionType->type === 'essay') {
+            // Untuk essay, kunci jawaban wajib diisi
+            $rules['correct_answer_text'] = 'required|string';
         }
         
         $validated = $request->validate($rules);
@@ -188,11 +182,11 @@ class AdminTryoutController extends Controller
         DB::beginTransaction();
         
         try {
-            // Create question data
+            // Create question data dengan category_id dari tryout
             $questionData = [
                 'question_text' => $validated['question_text'],
                 'question_type_id' => $validated['question_type_id'],
-                'category_id' => $validated['category_id'],
+                'category_id' => $tryout->category_id,
                 'explanation' => $validated['explanation'] ?? null,
                 'image_url' => $validated['image_url'] ?? null,
                 'correct_answer_text' => $validated['correct_answer_text'] ?? null,
@@ -202,7 +196,7 @@ class AdminTryoutController extends Controller
             $question = Question::create($questionData);
             
             // Create options for multiple choice
-            if ($questionType && $questionType->type === 'Pilihan Ganda' && isset($validated['options'])) {
+            if ($questionType && $questionType->type === 'multiple_choice' && isset($validated['options'])) {
                 foreach ($validated['options'] as $option) {
                     Option::create([
                         'question_id' => $question->question_id,
@@ -240,9 +234,8 @@ class AdminTryoutController extends Controller
      */
     public function editQuestion($tryout_id, $question_id)
     {
-        $tryout = Tryout::where('tryout_id', $tryout_id)->firstOrFail();
+        $tryout = Tryout::with('category')->where('tryout_id', $tryout_id)->firstOrFail();
         $question = Question::where('question_id', $question_id)->with('options')->firstOrFail();
-        
         
         // Get question number from pivot table
         $tryoutQuestion = TryoutQuestion::where('tryout_id', $tryout->tryout_id)
@@ -254,10 +247,7 @@ class AdminTryoutController extends Controller
         // Get question types
         $questionTypes = QuestionType::all();
         
-        // Get categories
-        $categories = QuestionBankCategory::all();
-        
-        return view('admin.tryout.questions.edit', compact('tryout', 'question', 'questionNumber', 'questionTypes', 'categories'));
+        return view('admin.tryout.questions.edit', compact('tryout', 'question', 'questionNumber', 'questionTypes'));
     }
 
     /**
@@ -271,7 +261,6 @@ class AdminTryoutController extends Controller
         $rules = [
             'question_text' => 'required|string',
             'question_type_id' => 'required|exists:question_types,id',
-            'category_id' => 'required|exists:question_bank_categories,id',
             'question_number' => 'required|integer|min:1',
             'explanation' => 'nullable|string',
             'image_url' => 'nullable|url',
@@ -280,13 +269,14 @@ class AdminTryoutController extends Controller
         // Get question type to check if multiple choice
         $questionType = QuestionType::find($request->question_type_id);
         
-        // Add validation for multiple choice options
-        if ($questionType && $questionType->type === 'Pilihan Ganda') {
+        // Add validation - sesuaikan dengan nilai di database: "multiple_choice" dan "essay"
+        if ($questionType && $questionType->type === 'multiple_choice') {
             $rules['options'] = 'required|array|min:2';
             $rules['options.*.option_text'] = 'required|string';
             $rules['options.*.is_correct'] = 'required|boolean';
-        } else {
-            $rules['correct_answer_text'] = 'nullable|string';
+        } else if ($questionType && $questionType->type === 'essay') {
+            // Untuk essay, kunci jawaban wajib diisi
+            $rules['correct_answer_text'] = 'required|string';
         }
         
         $validated = $request->validate($rules);
@@ -294,18 +284,18 @@ class AdminTryoutController extends Controller
         DB::beginTransaction();
         
         try {
-            // Update question data
+            // Update question data dengan category_id dari tryout
             $question->update([
                 'question_text' => $validated['question_text'],
                 'question_type_id' => $validated['question_type_id'],
-                'category_id' => $validated['category_id'],
+                'category_id' => $tryout->category_id,
                 'explanation' => $validated['explanation'] ?? null,
                 'image_url' => $validated['image_url'] ?? null,
                 'correct_answer_text' => $validated['correct_answer_text'] ?? null,
             ]);
             
             // Update options for multiple choice
-            if ($questionType && $questionType->type === 'Pilihan Ganda' && isset($validated['options'])) {
+            if ($questionType && $questionType->type === 'multiple_choice' && isset($validated['options'])) {
                 // Delete old options
                 Option::where('question_id', $question->question_id)->delete();
                 

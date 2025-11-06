@@ -9,7 +9,10 @@
     <div class="container mx-auto px-4 sm:px-6 md:py-2 lg:px-8">
         <div class="bg-white p-6 md:p-8">
             <div class="mb-6 flex items-center justify-between">
-                <h2 class="text-2xl font-bold text-gray-900">{{ $tryout->title }}</h2>
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">{{ $tryout->title }}</h2>
+                    <p class="text-sm text-gray-600 mt-1">Kategori: <span class="font-semibold">{{ $tryout->category->name }}</span></p>
+                </div>
                 <a href="{{ route('admin.tryout.show', $tryout->tryout_id) }}"
                     class="inline-flex items-center rounded-lg bg-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-300">
                     Kembali
@@ -39,22 +42,6 @@
                             required min="1">
                     </div>
 
-                    <!-- Kategori -->
-                    <div>
-                        <label for="category_id" class="block text-sm font-medium text-gray-700">Kategori</label>
-                        <select name="category_id" id="category_id"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-main-bg focus:ring-main-bg"
-                            required>
-                            <option value="">Pilih Kategori</option>
-                            @foreach ($categories as $category)
-                                <option value="{{ $category->id }}"
-                                    {{ old('category_id') == $category->id ? 'selected' : '' }}>
-                                    {{ $category->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
                     <!-- Tipe Soal -->
                     <div>
                         <label for="question_type_id" class="block text-sm font-medium text-gray-700">Tipe Soal</label>
@@ -63,12 +50,15 @@
                             required>
                             <option value="">Pilih Tipe</option>
                             @foreach ($questionTypes as $type)
-                                <option value="{{ $type->id }}" data-type="{{ $type->type }}"
+                                <option value="{{ $type->id }}" 
+                                        data-type="{{ $type->type }}"
+                                        data-type-name="{{ $type->type }}"
                                     {{ old('question_type_id') == $type->id ? 'selected' : '' }}>
                                     {{ ucfirst(str_replace('_', ' ', $type->type)) }}
                                 </option>
                             @endforeach
                         </select>
+                        <p class="mt-1 text-xs text-gray-500">Debug: Pilih tipe soal untuk melihat form yang sesuai</p>
                     </div>
 
                     <!-- Pertanyaan -->
@@ -97,14 +87,16 @@
                             class="mt-2 rounded-lg bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700">
                             + Tambah Opsi
                         </button>
+                        <p class="mt-2 text-sm text-gray-600">*Centang kotak "Benar" pada jawaban yang benar</p>
                     </div>
 
                     <!-- Jawaban Essay -->
                     <div id="essay-answer" style="display: none;">
-                        <label for="correct_answer_text" class="block text-sm font-medium text-gray-700">Jawaban (untuk
-                            Essay)</label>
-                        <textarea name="correct_answer_text" id="correct_answer_text" rows="3"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-main-bg focus:ring-main-bg">{{ old('correct_answer_text') }}</textarea>
+                        <label for="correct_answer_text" class="block text-sm font-medium text-gray-700">Kunci Jawaban</label>
+                        <textarea name="correct_answer_text" id="correct_answer_text" rows="4"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-main-bg focus:ring-main-bg" 
+                            placeholder="Masukkan kunci jawaban untuk soal essay ini...">{{ old('correct_answer_text') }}</textarea>
+                        <p class="mt-1 text-sm text-gray-600">*Jawaban ini akan digunakan sebagai referensi untuk penilaian</p>
                     </div>
 
                     <!-- Pembahasan -->
@@ -132,28 +124,65 @@
     <script>
         let optionCount = 0;
 
-        // Toggle options/essay based on question type
-        document.getElementById('question_type_id').addEventListener('change', function() {
-            const selectedOption = this.options[this.selectedIndex];
+        function toggleQuestionType() {
+            const questionTypeSelect = document.getElementById('question_type_id');
+            const selectedOption = questionTypeSelect.options[questionTypeSelect.selectedIndex];
             const typeName = selectedOption.getAttribute('data-type');
 
             const optionsContainer = document.getElementById('options-container');
             const essayAnswer = document.getElementById('essay-answer');
+            const essayTextarea = document.getElementById('correct_answer_text');
 
-            if (typeName === 'Pilihan Ganda') {
+            console.log('Type selected:', typeName); // Debug
+            console.log('Selected option:', selectedOption); // Debug
+
+            // Check for both "Pilihan Ganda" and "multiple_choice" to handle both naming conventions
+            if (typeName === 'Pilihan Ganda' || typeName === 'multiple_choice') {
+                console.log('Showing multiple choice options'); // Debug
+                
+                // Show options, hide essay
                 optionsContainer.style.display = 'block';
                 essayAnswer.style.display = 'none';
+                
+                // Remove required from essay
+                essayTextarea.removeAttribute('required');
+                essayTextarea.value = '';
 
                 // Add initial options if empty
-                if (optionCount === 0) {
+                const currentOptions = document.querySelectorAll('.option-item').length;
+                console.log('Current options count:', currentOptions); // Debug
+                
+                if (currentOptions === 0) {
+                    addOption();
+                    addOption();
                     addOption();
                     addOption();
                 }
-            } else {
+            } else if (typeName === 'Essay' || typeName === 'essay') {
+                console.log('Showing essay answer'); // Debug
+                
+                // Show essay, hide options
                 optionsContainer.style.display = 'none';
                 essayAnswer.style.display = 'block';
+                
+                // Add required to essay
+                essayTextarea.setAttribute('required', 'required');
+                
+                // Clear options when switching to essay
+                document.getElementById('options-list').innerHTML = '';
+                optionCount = 0;
+            } else {
+                console.log('No valid type selected'); // Debug
+                
+                // Default: hide both
+                optionsContainer.style.display = 'none';
+                essayAnswer.style.display = 'none';
+                essayTextarea.removeAttribute('required');
             }
-        });
+        }
+
+        // Toggle options/essay based on question type
+        document.getElementById('question_type_id').addEventListener('change', toggleQuestionType);
 
         // Add option button
         document.getElementById('add-option-btn').addEventListener('click', function() {
@@ -167,30 +196,29 @@
             const optionDiv = document.createElement('div');
             optionDiv.className = 'mb-3 flex items-start gap-2 option-item';
             optionDiv.innerHTML = `
-    <div class="flex-1">
-        <input type="text" 
-               name="options[${optionCount}][option_text]" 
-               placeholder="Teks Opsi ${optionCount}"
-               class="block w-full rounded-md border-gray-300 shadow-sm focus:border-main-bg focus:ring-main-bg"
-               required>
-    </div>
-    <div class="flex items-center gap-2">
-        <label class="flex items-center">
-            <input type="hidden" name="options[${optionCount}][is_correct]" value="0">
-            <input type="checkbox" 
-                   name="options[${optionCount}][is_correct]" 
-                   value="1"
-                   class="rounded border-gray-300 text-main-bg focus:ring-main-bg">
-            <span class="ml-2 text-sm text-gray-700">Benar</span>
-        </label>
-        <button type="button" 
-                class="remove-option rounded bg-red-600 px-3 py-2 text-xs text-white hover:bg-red-700"
-                onclick="removeOption(this)">
-            Hapus
-        </button>
-    </div>
-`;
-
+                <div class="flex-1">
+                    <input type="text" 
+                           name="options[${optionCount}][option_text]" 
+                           placeholder="Teks Opsi ${optionCount}"
+                           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-main-bg focus:ring-main-bg"
+                           required>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="flex items-center">
+                        <input type="hidden" name="options[${optionCount}][is_correct]" value="0">
+                        <input type="checkbox" 
+                               name="options[${optionCount}][is_correct]" 
+                               value="1"
+                               class="rounded border-gray-300 text-main-bg focus:ring-main-bg">
+                        <span class="ml-2 text-sm text-gray-700">Benar</span>
+                    </label>
+                    <button type="button" 
+                            class="remove-option rounded bg-red-600 px-3 py-2 text-xs text-white hover:bg-red-700"
+                            onclick="removeOption(this)">
+                        Hapus
+                    </button>
+                </div>
+            `;
 
             optionsList.appendChild(optionDiv);
         }
@@ -201,7 +229,7 @@
 
             // Re-count remaining options
             const remainingOptions = document.querySelectorAll('.option-item').length;
-            if (remainingOptions < 2) {
+            if (remainingOptions < 2 && document.getElementById('options-container').style.display === 'block') {
                 alert('Minimal harus ada 2 opsi jawaban!');
                 addOption();
             }
@@ -236,6 +264,7 @@
                             </div>
                             <div class="flex items-center gap-2">
                                 <label class="flex items-center">
+                                    <input type="hidden" name="options[${optionCount}][is_correct]" value="0">
                                     <input type="checkbox" 
                                            name="options[${optionCount}][is_correct]" 
                                            value="1"
@@ -249,7 +278,6 @@
                                     Hapus
                                 </button>
                             </div>
-                            <input type="hidden" name="options[${optionCount}][is_correct]" value="0">
                         `;
                         optionsList.appendChild(optionDiv);
                     });

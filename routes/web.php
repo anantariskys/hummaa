@@ -39,6 +39,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     //Admin Page
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
+        
+        // Admin Dashboard - Route utama untuk /admin
+        Route::get('/', function () {
+            return view('admin.dashboard');
+        })->name('dashboard');
+        
         Route::prefix('materials')->group(function () {
             Route::get('/', [MateriController::class, 'indexAdmin'])->name('materials');
             Route::get('/create', [MateriController::class, 'create'])->name('materials.create');

@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
             QuestionBankCategorySeeder::class,
             MateriSeeder::class,
             DummyTryoutSeeder::class,
+            TryOutSystemSeeder::class,
         ]);
     }
 }

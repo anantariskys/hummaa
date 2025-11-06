@@ -15,11 +15,24 @@ class TryoutController extends Controller
 {
     /**
      * Memulai sesi tryout, membuat attempt, dan menampilkan halaman soal.
+     * VALIDASI: User hanya bisa mengerjakan tryout 1x
      */
     public function start($tryout_id)
     {
         $tryout = Tryout::findOrFail($tryout_id);
         $user = Auth::user();
+
+        // CEK APAKAH USER SUDAH PERNAH MENGERJAKAN TRYOUT INI
+        $existingAttempt = TryoutAttempt::where('user_id', $user->id)
+            ->where('tryout_id', $tryout->tryout_id)
+            ->where('status', 'submitted')
+            ->first();
+
+        if ($existingAttempt) {
+            return redirect()
+                ->route('bank-soal.index')
+                ->with('error', 'Anda sudah pernah mengerjakan tryout ini. Silakan gunakan Mode Belajar untuk mengulang.');
+        }
 
         $attempt = TryoutAttempt::create([
             'user_id' => $user->id,
@@ -35,18 +48,25 @@ class TryoutController extends Controller
             ->get();
 
         $formattedQuestions = $questions->map(function ($q, $index) {
+            $questionType = $q->questionType->type;
+            $isMultipleChoice = ($questionType === 'multiple_choice');
+            
             return [
                 'id' => $q->question_id,
                 'number' => $index + 1,
                 'text' => $q->question_text,
-                'type' => $q->questionType->type == 'Pilihan Ganda' ? 'pilihan_ganda' : 'isian',
+                'type' => $isMultipleChoice ? 'pilihan_ganda' : 'isian',
                 'image' => $q->image_url ? asset($q->image_url) : null,
-                'options' => $q->options->mapWithKeys(function ($opt, $optIndex) {
+                'options' => $isMultipleChoice ? $q->options->mapWithKeys(function ($opt, $optIndex) {
                     $key = chr(65 + $optIndex);
                     return [$key => ['id' => $opt->option_id, 'text' => $opt->option_text]];
-                }),
+                }) : collect([]),
                 'explanation' => $q->explanation,
-                'correctAnswer' => $q->questionType->type == 'Pilihan Ganda' ? ($q->options->search(fn($opt) => $opt->is_correct) !== false ? chr(65 + $q->options->search(fn($opt) => $opt->is_correct)) : null) : $q->correct_answer_text,
+                'correctAnswer' => $isMultipleChoice 
+                    ? ($q->options->search(fn($opt) => $opt->is_correct) !== false 
+                        ? chr(65 + $q->options->search(fn($opt) => $opt->is_correct)) 
+                        : null) 
+                    : $q->correct_answer_text,
             ];
         });
 
@@ -75,11 +95,11 @@ class TryoutController extends Controller
         try {
             DB::beginTransaction();
 
-            $attempt = TryoutAttempt::with('tryout.questions')->findOrFail($attempt_id);
+            $attempt = TryoutAttempt::with('tryout.questions.options', 'tryout.questions.questionType')
+                ->findOrFail($attempt_id);
             $answers = $request->input('answers');
 
             $correctAnswersCount = 0;
-
             $tryoutQuestions = $attempt->tryout->questions->keyBy('question_id');
 
             foreach ($answers as $question_id => $answerData) {
@@ -87,14 +107,17 @@ class TryoutController extends Controller
                 if (!$question) {
                     continue;
                 }
+                
                 $isCorrect = false;
-                if ($question->questionType->type == 'Pilihan Ganda') {
+                $questionType = $question->questionType->type;
+                
+                if ($questionType === 'multiple_choice') {
                     $selectedOptionId = $answerData['optionId'] ?? null;
                     $correctOption = $question->options->firstWhere('is_correct', true);
                     if ($correctOption && $selectedOptionId == $correctOption->option_id) {
                         $isCorrect = true;
                     }
-                } elseif ($question->questionType->type == 'Isian Singkat') {
+                } elseif ($questionType === 'essay') {
                     $userText = $answerData['text'] ?? '';
                     if (strcasecmp(trim($userText), trim($question->correct_answer_text)) == 0) {
                         $isCorrect = true;
@@ -130,16 +153,12 @@ class TryoutController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
-
             Log::error('Gagal submit tryout: ' . $e->getMessage());
 
-            return response()->json(
-                [
-                    'message' => 'Terjadi kesalahan saat menyimpan jawaban.',
-                    'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan pada server.',
-                ],
-                500,
-            );
+            return response()->json([
+                'message' => 'Terjadi kesalahan saat menyimpan jawaban.',
+                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan pada server.',
+            ], 500);
         }
     }
 
@@ -174,38 +193,57 @@ class TryoutController extends Controller
             ->first();
 
         if (!$latestAttempt) {
-            return redirect()->route('bank-soal.index')->with('error', 'Anda harus menyelesaikan mode tryout terlebih dahulu sebelum masuk ke mode belajar.');
+            return redirect()->route('bank-soal.index')
+                ->with('error', 'Anda harus menyelesaikan mode tryout terlebih dahulu sebelum masuk ke mode belajar.');
         }
 
         $questions = $tryout
             ->questions()
             ->with(['options', 'questionType'])
             ->get();
-        $userAnswers = UserAnswer::where('attempt_id', $latestAttempt->attempt_id)->get()->keyBy('question_id');
+        $userAnswers = UserAnswer::where('attempt_id', $latestAttempt->attempt_id)
+            ->get()
+            ->keyBy('question_id');
 
         $formattedQuestions = $questions->map(function ($q, $index) {
+            $questionType = $q->questionType->type;
+            $isMultipleChoice = ($questionType === 'multiple_choice');
+            
             return [
                 'id' => $q->question_id,
                 'number' => $index + 1,
                 'text' => $q->question_text,
-                'type' => $q->questionType->type == 'Pilihan Ganda' ? 'pilihan_ganda' : 'isian',
+                'type' => $isMultipleChoice ? 'pilihan_ganda' : 'isian',
                 'image' => $q->image_url ? asset($q->image_url) : null,
-                'options' => $q->options->mapWithKeys(function ($opt, $optIndex) {
+                'options' => $isMultipleChoice ? $q->options->mapWithKeys(function ($opt, $optIndex) {
                     $key = chr(65 + $optIndex);
                     return [$key => ['id' => $opt->option_id, 'text' => $opt->option_text]];
-                }),
+                }) : collect([]),
                 'explanation' => $q->explanation,
-                'correctAnswer' => $q->questionType->type == 'Pilihan Ganda' ? ($q->options->search(fn($opt) => $opt->is_correct) !== false ? chr(65 + $q->options->search(fn($opt) => $opt->is_correct)) : null) : $q->correct_answer_text,
+                'correctAnswer' => $isMultipleChoice 
+                    ? ($q->options->search(fn($opt) => $opt->is_correct) !== false 
+                        ? chr(65 + $q->options->search(fn($opt) => $opt->is_correct)) 
+                        : null) 
+                    : $q->correct_answer_text,
             ];
         });
 
         $formattedAnswers = [];
         foreach ($userAnswers as $question_id => $answer) {
-            $formattedAnswers[$question_id] = [
-                'key' => $answer->selectedOption ? chr(65 + $questions->find($question_id)->options->search(fn($opt) => $opt->option_id == $answer->selected_option_id)) : null,
-                'optionId' => $answer->selected_option_id,
-                'text' => $answer->answer_text,
-            ];
+            $question = $questions->find($question_id);
+            if ($question && $question->questionType->type === 'multiple_choice') {
+                $formattedAnswers[$question_id] = [
+                    'key' => $answer->selected_option_id ? chr(65 + $question->options->search(fn($opt) => $opt->option_id == $answer->selected_option_id)) : null,
+                    'optionId' => $answer->selected_option_id,
+                    'text' => null,
+                ];
+            } else {
+                $formattedAnswers[$question_id] = [
+                    'key' => null,
+                    'optionId' => null,
+                    'text' => $answer->answer_text,
+                ];
+            }
         }
 
         return view('tryout.tryout-page', [
@@ -218,24 +256,45 @@ class TryoutController extends Controller
 
     /**
      * Learning mode - mengerjakan soal tanpa menyimpan jawaban.
+     * VALIDASI: User HARUS sudah pernah mengerjakan tryout dulu
      */
     public function startLearningMode($tryout_id)
     {
+        $user = Auth::user();
         $tryout = Tryout::with(['questions.options', 'questions.questionType'])->findOrFail($tryout_id);
 
+        // CEK APAKAH USER SUDAH PERNAH MENGERJAKAN TRYOUT INI
+        $existingAttempt = TryoutAttempt::where('user_id', $user->id)
+            ->where('tryout_id', $tryout->tryout_id)
+            ->where('status', 'submitted')
+            ->first();
+
+        if (!$existingAttempt) {
+            return redirect()
+                ->route('bank-soal.index')
+                ->with('error', 'Anda harus menyelesaikan Mode Tryout terlebih dahulu sebelum mengakses Mode Belajar.');
+        }
+
         $formattedQuestions = $tryout->questions->map(function ($q, $index) {
+            $questionType = $q->questionType->type;
+            $isMultipleChoice = ($questionType === 'multiple_choice');
+            
             return [
                 'id' => $q->question_id,
                 'number' => $index + 1,
                 'text' => $q->question_text,
-                'type' => $q->questionType->type == 'Pilihan Ganda' ? 'pilihan_ganda' : 'isian',
+                'type' => $isMultipleChoice ? 'pilihan_ganda' : 'isian',
                 'image' => $q->image_url ? asset($q->image_url) : null,
-                'options' => $q->options->mapWithKeys(function ($opt, $optIndex) {
+                'options' => $isMultipleChoice ? $q->options->mapWithKeys(function ($opt, $optIndex) {
                     $key = chr(65 + $optIndex);
                     return [$key => ['id' => $opt->option_id, 'text' => $opt->option_text]];
-                }),
+                }) : collect([]),
                 'explanation' => $q->explanation,
-                'correctAnswer' => $q->questionType->type == 'Pilihan Ganda' ? ($q->options->search(fn($opt) => $opt->is_correct) !== false ? chr(65 + $q->options->search(fn($opt) => $opt->is_correct)) : null) : $q->correct_answer_text,
+                'correctAnswer' => $isMultipleChoice 
+                    ? ($q->options->search(fn($opt) => $opt->is_correct) !== false 
+                        ? chr(65 + $q->options->search(fn($opt) => $opt->is_correct)) 
+                        : null) 
+                    : $q->correct_answer_text,
             ];
         });
 
