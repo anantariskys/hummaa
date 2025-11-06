@@ -7,6 +7,7 @@ use App\Models\QuestionType;
 
 class QuestionTypeSeeder extends Seeder
 {
+
     public function run()
     {
         $types = [

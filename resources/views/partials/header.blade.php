@@ -66,13 +66,13 @@
                             Try Out
                         </a>
                     </li>
-                    <li>
+                    {{-- <li>
                         <a href="{{ route('admin.questions') }}"
                             class="font-semibold transition-colors duration-300 rounded-lg px-4 py-2
                     {{ request()->routeIs('admin.questions*') ? 'bg-main-bg text-white' : 'text-gray-700 hover:text-main-bg' }}">
                             Bank Soal
                         </a>
-                    </li>
+                    </li> --}}
                 @endif
                 @if (Auth::user()->role === 'user')
                     <li>

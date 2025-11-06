@@ -73,15 +73,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
             });
         });
 
-        Route::prefix('questions')->group(function () {
-            Route::get('/', [QuestionController::class, 'index'])->name('questions');
-            Route::get('/create', [QuestionController::class, 'create'])->name('questions.create');
-            Route::post('/', [QuestionController::class, 'store'])->name('questions.store');
-            Route::get('/{question}', [QuestionController::class, 'show'])->name('questions.show');
-            Route::get('/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
-            Route::put('/{question}', [QuestionController::class, 'update'])->name('questions.update');
-            Route::delete('/{question}', [QuestionController::class, 'destroy'])->name('questions.destroy');
-        });
+        // Route::prefix('questions')->group(function () {
+        //     Route::get('/', [QuestionController::class, 'index'])->name('questions');
+        //     Route::get('/create', [QuestionController::class, 'create'])->name('questions.create');
+        //     Route::post('/', [QuestionController::class, 'store'])->name('questions.store');
+        //     Route::get('/{question}', [QuestionController::class, 'show'])->name('questions.show');
+        //     Route::get('/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
+        //     Route::put('/{question}', [QuestionController::class, 'update'])->name('questions.update');
+        //     Route::delete('/{question}', [QuestionController::class, 'destroy'])->name('questions.destroy');
+        // });
     });
 
 
