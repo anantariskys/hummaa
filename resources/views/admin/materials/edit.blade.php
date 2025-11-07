@@ -42,6 +42,16 @@
                     @enderror
                 </div>
 
+                <!-- Status Aktif -->
+                <div class="mb-4">
+                    <label class="flex items-center">
+                        <input type="checkbox" name="is_active" value="1" 
+                               {{ old('is_active', $material->is_active) ? 'checked' : '' }}
+                               class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <span class="ml-2 text-sm text-gray-700">Aktifkan materi (tampilkan ke user)</span>
+                    </label>
+                </div>
+
                 <!-- File Materi -->
                 <div class="mb-6">
                     <label for="file" class="block text-sm font-medium text-gray-700">File Materi</label>
@@ -51,13 +61,19 @@
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                     @if($material->file_path)
-                        <p class="mt-2 text-sm text-gray-600">File saat ini: <a href="{{ asset('storage/' . $material->file_path) }}" target="_blank" class="text-main-bg underline">Lihat file</a></p>
+                        <p class="mt-2 text-sm text-gray-600">
+                            File saat ini: 
+                            <a href="{{ asset('storage/' . $material->file_path) }}" target="_blank" class="text-main-bg underline">
+                                Lihat file
+                            </a>
+                            <span class="text-gray-500">({{ $material->file_size }})</span>
+                        </p>
                     @endif
                 </div>
 
                 <!-- Tombol Aksi -->
                 <div class="flex items-center justify-end gap-2">
-                    <a href="{{ route('admin.materials') }}"
+                    <a href="{{ route('admin.materials.index') }}"
                        class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
                         Batal
                     </a>
