@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Events;
 use App\Models\Tryout;
 use App\Models\TryoutAttempt;
 use App\Models\UserAnswer;
@@ -17,22 +18,28 @@ class TryoutController extends Controller
      * Memulai sesi tryout, membuat attempt, dan menampilkan halaman soal.
      * VALIDASI: User hanya bisa mengerjakan tryout 1x
      */
+
+    public function index()
+    {
+        $tryouts = Events::all();
+        return view('tryout.tryout-landing-page', compact('tryouts'));
+    }
     public function start($tryout_id)
     {
         $tryout = Tryout::findOrFail($tryout_id);
         $user = Auth::user();
 
-        // CEK APAKAH USER SUDAH PERNAH MENGERJAKAN TRYOUT INI
-        $existingAttempt = TryoutAttempt::where('user_id', $user->id)
-            ->where('tryout_id', $tryout->tryout_id)
-            ->where('status', 'submitted')
-            ->first();
+        // // CEK APAKAH USER SUDAH PERNAH MENGERJAKAN TRYOUT INI
+        // $existingAttempt = TryoutAttempt::where('user_id', $user->id)
+        //     ->where('tryout_id', $tryout->tryout_id)
+        //     ->where('status', 'submitted')
+        //     ->first();
 
-        if ($existingAttempt) {
-            return redirect()
-                ->route('bank-soal.index')
-                ->with('error', 'Anda sudah pernah mengerjakan tryout ini. Silakan gunakan Mode Belajar untuk mengulang.');
-        }
+        // if ($existingAttempt) {
+        //     return redirect()
+        //         ->route('bank-soal.index')
+        //         ->with('error', 'Anda sudah pernah mengerjakan tryout ini. Silakan gunakan Mode Belajar untuk mengulang.');
+        // }
 
         $attempt = TryoutAttempt::create([
             'user_id' => $user->id,
