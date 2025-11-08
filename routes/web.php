@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\EventsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\BankSoalController;
@@ -39,12 +40,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     //Admin Page
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
-        
+
         // Admin Dashboard - Route utama untuk /admin
         Route::get('/', function () {
             return view('admin.dashboard');
         })->name('dashboard');
-        
+
         Route::prefix('materials')->group(function () {
             Route::get('/', [MateriController::class, 'indexAdmin'])->name('materials');
             Route::get('/create', [MateriController::class, 'create'])->name('materials.create');
@@ -73,6 +74,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             });
         });
 
+        Route::prefix('events')->group(function () {
+            Route::get('/', [EventsController::class, 'index'])->name('events.index');
+            Route::get('/create', [EventsController::class, 'create'])->name('events.create');
+            Route::post('/', [EventsController::class, 'store'])->name('events.store');
+            Route::get('/{event}', [EventsController::class, 'show'])->name('events.show');
+            Route::get('/{event}/edit', [EventsController::class, 'edit'])->name('events.edit');
+            Route::put('/{event}', [EventsController::class, 'update'])->name('events.update');
+            Route::delete('/{event}', [EventsController::class, 'destroy'])->name('events.destroy');
+        });
+
         // Route::prefix('questions')->group(function () {
         //     Route::get('/', [QuestionController::class, 'index'])->name('questions');
         //     Route::get('/create', [QuestionController::class, 'create'])->name('questions.create');
@@ -82,6 +93,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         //     Route::put('/{question}', [QuestionController::class, 'update'])->name('questions.update');
         //     Route::delete('/{question}', [QuestionController::class, 'destroy'])->name('questions.destroy');
         // });
+
     });
 
 
@@ -91,9 +103,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::prefix('tryout')
             ->name('tryout.')
             ->group(function () {
-                Route::get('/', function () {
-                    return view('tryout.tryout-landing-page');
-                })->name('index');
+                Route::get('/', [TryoutController::class, 'index'])->name('index');
 
                 Route::get('/{tryout_id}', [TryoutController::class, 'start'])->name('start');
 
