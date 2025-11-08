@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             MateriSeeder::class,
             DummyTryoutSeeder::class,
             TryOutSystemSeeder::class,
+            EventSeeder::class,
         ]);
     }
 }
