@@ -66,6 +66,13 @@
                             Try Out
                         </a>
                     </li>
+                    <li>
+                        <a href="{{ route('admin.events.index') }}"
+                            class="font-semibold transition-colors duration-300 rounded-lg px-4 py-2
+                    {{ request()->routeIs('admin.events*') ? 'bg-main-bg text-white' : 'text-gray-700 hover:text-main-bg' }}">
+                            Events
+                        </a>
+                    </li>
                     {{-- <li>
                         <a href="{{ route('admin.questions') }}"
                             class="font-semibold transition-colors duration-300 rounded-lg px-4 py-2

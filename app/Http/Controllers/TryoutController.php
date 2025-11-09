@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Events;
 use App\Models\Tryout;
 use App\Models\TryoutAttempt;
 use App\Models\UserAnswer;
@@ -14,6 +15,25 @@ use Illuminate\Support\Facades\Log;
 class TryoutController extends Controller
 {
     /**
+     * Menampilkan halaman landing tryout dengan daftar semua tryout yang tersedia
+     */
+    public function index()
+    {
+        // Ambil semua events yang memiliki tryout terhubung
+        $tryouts = Events::with(['tryout' => function($query) {
+                            $query->with('questions');
+                        }])
+                        ->whereHas('tryout') // Filter: hanya events yang punya tryout
+                        ->orderBy('created_at', 'desc')
+                        ->get();
+
+        // Debug: Uncomment untuk troubleshooting
+        // dd($tryouts);
+
+        return view('tryout.tryout-landing-page', compact('tryouts'));
+    }
+
+    /**
      * Memulai sesi tryout, membuat attempt, dan menampilkan halaman soal.
      * VALIDASI: User hanya bisa mengerjakan tryout 1x
      */
@@ -22,17 +42,17 @@ class TryoutController extends Controller
         $tryout = Tryout::findOrFail($tryout_id);
         $user = Auth::user();
 
-        // CEK APAKAH USER SUDAH PERNAH MENGERJAKAN TRYOUT INI
-        $existingAttempt = TryoutAttempt::where('user_id', $user->id)
-            ->where('tryout_id', $tryout->tryout_id)
-            ->where('status', 'submitted')
-            ->first();
+        // // CEK APAKAH USER SUDAH PERNAH MENGERJAKAN TRYOUT INI
+        // $existingAttempt = TryoutAttempt::where('user_id', $user->id)
+        //     ->where('tryout_id', $tryout->tryout_id)
+        //     ->where('status', 'submitted')
+        //     ->first();
 
-        if ($existingAttempt) {
-            return redirect()
-                ->route('bank-soal.index')
-                ->with('error', 'Anda sudah pernah mengerjakan tryout ini. Silakan gunakan Mode Belajar untuk mengulang.');
-        }
+        // if ($existingAttempt) {
+        //     return redirect()
+        //         ->route('bank-soal.index')
+        //         ->with('error', 'Anda sudah pernah mengerjakan tryout ini. Silakan gunakan Mode Belajar untuk mengulang.');
+        // }
 
         $attempt = TryoutAttempt::create([
             'user_id' => $user->id,

@@ -11,6 +11,7 @@ use App\Models\QuestionType;
 use App\Models\Option;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\Events;
 
 class AdminTryoutController extends Controller
 {
@@ -40,8 +41,9 @@ class AdminTryoutController extends Controller
      */
     public function create()
     {
+        $events = Events::orderBy('created_at', 'desc')->get();
         $categories = QuestionBankCategory::all();
-        return view('admin.tryout.create', compact('categories'));
+        return view('admin.tryout.create', compact('events','categories'));
     }
 
     /**
@@ -50,20 +52,24 @@ class AdminTryoutController extends Controller
     public function store(Request $request)
     {
         $request->validate([
+            'event_id' => 'required|exists:events,id',
             'title' => 'required|string|max:255',
             'year' => 'required|integer|min:' . date('Y'),
             'duration_minutes' => 'required|integer|min:1',
             'category_id' => 'required|exists:question_bank_categories,id',
         ]);
 
-        Tryout::create([
+        $tryout = Tryout::create([
+            'event_id' => $request->event_id, // TAMBAHKAN INI - PENTING!
             'title' => $request->title,
             'year' => $request->year,
             'duration_minutes' => $request->duration_minutes,
             'category_id' => $request->category_id,
         ]);
 
-        return redirect()->route('admin.tryout.index')->with('success', 'Try Out berhasil ditambahkan!');
+        return redirect()
+            ->route('admin.tryout.show', $tryout->tryout_id)
+            ->with('success', 'Try Out berhasil ditambahkan dan terhubung dengan event!');
     }
 
     /**
@@ -90,9 +96,10 @@ class AdminTryoutController extends Controller
     public function edit($tryout_id)
     {
         $tryout = Tryout::where('tryout_id', $tryout_id)->firstOrFail();
+        $events = Events::orderBy('created_at', 'desc')->get(); // TAMBAHKAN INI
         $categories = QuestionBankCategory::all();
         
-        return view('admin.tryout.edit', compact('tryout', 'categories'));
+        return view('admin.tryout.edit', compact('tryout', 'events', 'categories')); // TAMBAHKAN 'events'
     }
 
     /**
@@ -101,6 +108,7 @@ class AdminTryoutController extends Controller
     public function update(Request $request, $tryout_id)
     {
         $request->validate([
+            'event_id' => 'required|exists:events,id', // TAMBAHKAN VALIDASI INI
             'title' => 'required|string|max:255',
             'year' => 'required|integer|min:' . date('Y'),
             'duration_minutes' => 'required|integer|min:1',
@@ -110,13 +118,16 @@ class AdminTryoutController extends Controller
         $tryout = Tryout::where('tryout_id', $tryout_id)->firstOrFail();
         
         $tryout->update([
+            'event_id' => $request->event_id, // TAMBAHKAN INI - PENTING!
             'title' => $request->title,
             'year' => $request->year,
             'duration_minutes' => $request->duration_minutes,
             'category_id' => $request->category_id,
         ]);
 
-        return redirect()->route('admin.tryout.index')->with('success', 'Try Out berhasil diperbarui!');
+        return redirect()
+            ->route('admin.tryout.show', $tryout->tryout_id)
+            ->with('success', 'Try Out berhasil diperbarui!');
     }
 
     /**

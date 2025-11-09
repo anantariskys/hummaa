@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\EventsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\BankSoalController;
@@ -36,11 +37,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
         
         // Admin Dashboard
+
+        // Admin Dashboard - Route utama untuk /admin
         Route::get('/', function () {
             return view('dashboard');
         })->name('dashboard');
         
         // Admin Materials Routes
+
         Route::prefix('materials')->group(function () {
             Route::get('/', [AdminMateriController::class, 'index'])->name('materials.index');
             Route::get('/create', [AdminMateriController::class, 'create'])->name('materials.create');
@@ -69,16 +73,36 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 Route::delete('/{question_id}', [AdminTryoutController::class, 'destroyQuestion'])->name('destroy');
             });
         });
+
+        Route::prefix('events')->group(function () {
+            Route::get('/', [EventsController::class, 'index'])->name('events.index');
+            Route::get('/create', [EventsController::class, 'create'])->name('events.create');
+            Route::post('/', [EventsController::class, 'store'])->name('events.store');
+            Route::get('/{event}', [EventsController::class, 'show'])->name('events.show');
+            Route::get('/{event}/edit', [EventsController::class, 'edit'])->name('events.edit');
+            Route::put('/{event}', [EventsController::class, 'update'])->name('events.update');
+            Route::delete('/{event}', [EventsController::class, 'destroy'])->name('events.destroy');
+        });
+
+        // Route::prefix('questions')->group(function () {
+        //     Route::get('/', [QuestionController::class, 'index'])->name('questions');
+        //     Route::get('/create', [QuestionController::class, 'create'])->name('questions.create');
+        //     Route::post('/', [QuestionController::class, 'store'])->name('questions.store');
+        //     Route::get('/{question}', [QuestionController::class, 'show'])->name('questions.show');
+        //     Route::get('/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
+        //     Route::put('/{question}', [QuestionController::class, 'update'])->name('questions.update');
+        //     Route::delete('/{question}', [QuestionController::class, 'destroy'])->name('questions.destroy');
+        // });
+
     });
 
     //User Page
     Route::middleware('role:user')->group(function () {
-        // Tryout Routes
+        // Tryout Routes - UPDATED LINE
         Route::prefix('tryout')->name('tryout.')->group(function () {
-            Route::get('/', function () {
-                return view('tryout.tryout-landing-page');
-            })->name('index');
-
+            // Changed from closure to controller method
+            Route::get('/', [TryoutController::class, 'index'])->name('index');
+            
             Route::get('/{tryout_id}', [TryoutController::class, 'start'])->name('start');
             Route::post('/submit/{attempt_id}', [TryoutController::class, 'submit'])->name('submit');
             Route::get('/hasil/{attempt_id}', [TryoutController::class, 'showResult'])->name('result');

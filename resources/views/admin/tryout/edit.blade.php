@@ -12,6 +12,26 @@
                 @csrf
                 @method('PUT')
 
+                <!-- Event Selection - FIELD BARU -->
+                <div class="mb-4">
+                    <label for="event_id" class="block text-sm font-medium text-gray-700">
+                        Event <span class="text-red-500">*</span>
+                    </label>
+                    <select name="event_id" id="event_id" required
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        <option value="">-- Pilih Event --</option>
+                        @foreach($events as $event)
+                            <option value="{{ $event->id }}" {{ old('event_id', $tryout->event_id) == $event->id ? 'selected' : '' }}>
+                                {{ $event->title }} - {{ $event->subtitle }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="mt-1 text-xs text-gray-500">Event yang dipilih akan menampilkan tryout ini di halaman user</p>
+                    @error('event_id')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 <!-- Judul -->
                 <div class="mb-4">
                     <label for="title" class="block text-sm font-medium text-gray-700">Judul</label>
