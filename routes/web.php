@@ -10,17 +10,13 @@ use App\Http\Controllers\DiscussionCommentarController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\TryoutController;
 use App\Http\Controllers\Admin\AdminTryoutController;
+use App\Http\Controllers\Admin\AdminMateriController;
 use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
-|
 */
 
 // Public Routes
@@ -37,24 +33,28 @@ Route::middleware('guest')->group(function () {
 // Protected Routes - Require Authentication
 Route::middleware(['auth', 'verified'])->group(function () {
 
-
     //Admin Page
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
+        
+        // Admin Dashboard
 
         // Admin Dashboard - Route utama untuk /admin
         Route::get('/', function () {
-            return view('admin.dashboard');
+            return view('dashboard');
         })->name('dashboard');
+        
+        // Admin Materials Routes
 
         Route::prefix('materials')->group(function () {
-            Route::get('/', [MateriController::class, 'indexAdmin'])->name('materials');
-            Route::get('/create', [MateriController::class, 'create'])->name('materials.create');
-            Route::post('/', [MateriController::class, 'store'])->name('materials.store');
-            Route::get('/{material}/edit', [MateriController::class, 'edit'])->name('materials.edit');
-            Route::put('/{material}', [MateriController::class, 'update'])->name('materials.update');
-            Route::delete('/{material}', [MateriController::class, 'destroy'])->name('materials.destroy');
+            Route::get('/', [AdminMateriController::class, 'index'])->name('materials.index');
+            Route::get('/create', [AdminMateriController::class, 'create'])->name('materials.create');
+            Route::post('/', [AdminMateriController::class, 'store'])->name('materials.store');
+            Route::get('/{material}/edit', [AdminMateriController::class, 'edit'])->name('materials.edit');
+            Route::put('/{material}', [AdminMateriController::class, 'update'])->name('materials.update');
+            Route::delete('/{material}', [AdminMateriController::class, 'destroy'])->name('materials.destroy');
         });
 
+        // Admin Tryout Routes
         Route::prefix('tryout')->group(function () {
             Route::get('/', [AdminTryoutController::class, 'index'])->name('tryout.index');
             Route::get('/create', [AdminTryoutController::class, 'create'])->name('tryout.create');
@@ -96,42 +96,40 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     });
 
-
     //User Page
     Route::middleware('role:user')->group(function () {
-        // Tryout Routes
-        Route::prefix('tryout')
-            ->name('tryout.')
-            ->group(function () {
-                Route::get('/', [TryoutController::class, 'index'])->name('index');
-
-                Route::get('/{tryout_id}', [TryoutController::class, 'start'])->name('start');
-
-                Route::post('/submit/{attempt_id}', [TryoutController::class, 'submit'])->name('submit');
-
-                Route::get('/hasil/{attempt_id}', [TryoutController::class, 'showResult'])->name('result');
-
-                Route::get('/review/{tryout_id}', [TryoutController::class, 'review'])->name('review');
-
-                Route::get('/{tryout_id}/learn', [TryoutController::class, 'startLearningMode'])->name('learn');
-
-                Route::get('{tryout_id}/history', [TryoutController::class, 'showHistory'])->name('history');
-            });
+        // Tryout Routes - UPDATED LINE
+        Route::prefix('tryout')->name('tryout.')->group(function () {
+            // Changed from closure to controller method
+            Route::get('/', [TryoutController::class, 'index'])->name('index');
+            
+            Route::get('/{tryout_id}', [TryoutController::class, 'start'])->name('start');
+            Route::post('/submit/{attempt_id}', [TryoutController::class, 'submit'])->name('submit');
+            Route::get('/hasil/{attempt_id}', [TryoutController::class, 'showResult'])->name('result');
+            Route::get('/review/{tryout_id}', [TryoutController::class, 'review'])->name('review');
+            Route::get('/{tryout_id}/learn', [TryoutController::class, 'startLearningMode'])->name('learn');
+            Route::get('{tryout_id}/history', [TryoutController::class, 'showHistory'])->name('history');
+        });
 
         Route::get('/bank-soal', [BankSoalController::class, 'index'])->name('bank-soal.index');
 
-
-        // Forum
+        // Forum Routes
         Route::get('/forum', [DiscussionController::class, 'index'])->name('forum');
         Route::resource('discussions', DiscussionController::class)->only(['store', 'show']);
         Route::resource('discussions.comments', DiscussionCommentarController::class)
             ->shallow()
             ->only(['store', 'edit', 'update', 'destroy']);
 
-        Route::resource('materials', MateriController::class);
-
-        Route::get('materials/{materi}/download', [MateriController::class, 'download'])->name('materials.download');
-        Route::patch('materials/{materi}/progress', [MateriController::class, 'updateProgress'])->name('materials.updateProgress');
+        // ============================================
+        // USER MATERIALS ROUTES - UPDATED
+        // ============================================
+        Route::prefix('materials')->name('materials.')->group(function () {
+            Route::get('/', [MateriController::class, 'index'])->name('index');
+            Route::get('/{materi}', [MateriController::class, 'show'])->name('show');
+            Route::get('/{materi}/view', [MateriController::class, 'view'])->name('view');
+            Route::get('/{materi}/download', [MateriController::class, 'download'])->name('download');
+            Route::patch('/{materi}/progress', [MateriController::class, 'updateProgress'])->name('updateProgress');
+        });
     });
 
     //User & Admin Page
@@ -140,14 +138,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/dashboard', function () {
             return view('dashboard');
         })->name('dashboard');
+        
         // Profile Management
-        Route::prefix('profile')
-            ->name('profile.')
-            ->group(function () {
-                Route::get('/', [ProfileController::class, 'edit'])->name('edit');
-                Route::patch('/', [ProfileController::class, 'update'])->name('update');
-                Route::delete('/', [ProfileController::class, 'destroy'])->name('destroy');
-            });
+        Route::prefix('profile')->name('profile.')->group(function () {
+            Route::get('/', [ProfileController::class, 'edit'])->name('edit');
+            Route::patch('/', [ProfileController::class, 'update'])->name('update');
+            Route::delete('/', [ProfileController::class, 'destroy'])->name('destroy');
+        });
     });
 });
 

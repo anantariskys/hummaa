@@ -9,7 +9,7 @@ class Events extends Model
 {
     use HasFactory;
 
-       protected $fillable = [
+    protected $fillable = [
         'title',
         'subtitle',
         'description',
@@ -22,4 +22,13 @@ class Events extends Model
     protected $casts = [
         'test_parts' => 'array',
     ];
+
+    /**
+     * Relasi One-to-One dengan Tryout
+     * Setiap event memiliki satu tryout
+     */
+    public function tryout()
+    {
+        return $this->hasOne(Tryout::class, 'event_id', 'id');
+    }
 }

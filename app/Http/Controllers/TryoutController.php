@@ -15,15 +15,28 @@ use Illuminate\Support\Facades\Log;
 class TryoutController extends Controller
 {
     /**
+     * Menampilkan halaman landing tryout dengan daftar semua tryout yang tersedia
+     */
+    public function index()
+    {
+        // Ambil semua events yang memiliki tryout terhubung
+        $tryouts = Events::with(['tryout' => function($query) {
+                            $query->with('questions');
+                        }])
+                        ->whereHas('tryout') // Filter: hanya events yang punya tryout
+                        ->orderBy('created_at', 'desc')
+                        ->get();
+
+        // Debug: Uncomment untuk troubleshooting
+        // dd($tryouts);
+
+        return view('tryout.tryout-landing-page', compact('tryouts'));
+    }
+
+    /**
      * Memulai sesi tryout, membuat attempt, dan menampilkan halaman soal.
      * VALIDASI: User hanya bisa mengerjakan tryout 1x
      */
-
-    public function index()
-    {
-        $tryouts = Events::all();
-        return view('tryout.tryout-landing-page', compact('tryouts'));
-    }
     public function start($tryout_id)
     {
         $tryout = Tryout::findOrFail($tryout_id);

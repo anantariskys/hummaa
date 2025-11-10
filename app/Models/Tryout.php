@@ -15,6 +15,7 @@ class Tryout extends Model
     protected $primaryKey = 'tryout_id';
 
     protected $fillable = [
+        'event_id',
         'title',
         'duration_minutes',
         'year',
@@ -49,4 +50,13 @@ class Tryout extends Model
     {
         return $this->hasMany(TryoutAttempt::class, 'tryout_id', 'tryout_id');
     }
+
+    /**
+ * Relasi Many-to-One dengan Events
+ */
+public function event()
+{
+    return $this->belongsTo(Events::class, 'event_id', 'id');
+}
+
 }

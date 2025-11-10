@@ -35,6 +35,7 @@
                 <div class="mb-4">
                     <label for="duration" class="block text-sm font-medium text-gray-700">Durasi</label>
                     <input type="text" name="duration" id="duration" value="{{ old('duration') }}" required
+                           placeholder="contoh: 45 menit"
                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                     @error('duration')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -49,11 +50,12 @@
                     @error('file')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
+                    <p class="mt-1 text-xs text-gray-500">Format: PDF, DOC, DOCX (Max: 10MB)</p>
                 </div>
 
                 <!-- Tombol Aksi -->
                 <div class="flex items-center justify-end gap-2">
-                    <a href="{{ route('admin.materials') }}"
+                    <a href="{{ route('admin.materials.index') }}"
                        class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
                         Batal
                     </a>

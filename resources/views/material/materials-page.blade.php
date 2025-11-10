@@ -33,19 +33,19 @@
 
             <div class="space-y-5">
                 <div class="space-y-5">
-                    @foreach ($allMateri as $materi)
-                        <x-materials.materials-card 
-                            :title="$materi['title']"
-                            :description="$materi['description']"
-                            :status="$materi['status']"
-                            :duration="$materi['duration']"
-                            :fileSize="$materi['fileSize']"
-                            :progress="$materi['progress']"
-                            :viewLink="asset('storage/' . $materi['file_path'])"
-                            :downloadLink="asset('storage/' . $materi['file_path'])"
-                        />
-                    @endforeach
-                </div>
+    @foreach ($allMateri as $materi)
+        <x-materials.materials-card 
+            :title="$materi->title"
+            :description="$materi->description"
+            :status="$materi->status"
+            :duration="$materi->duration"
+            :fileSize="$materi->file_size"
+            :progress="$materi->progress"
+            :viewLink="route('materials.view', $materi->id)"
+            :downloadLink="route('materials.download', $materi->id)"
+        />
+    @endforeach
+</div>
             </div>
         </div>
     </div>

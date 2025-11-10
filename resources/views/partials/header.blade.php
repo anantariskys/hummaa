@@ -53,7 +53,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="{{ route('admin.materials') }}"
+                        <a href="{{ route('admin.materials.index') }}"
                             class="font-semibold transition-colors duration-300 rounded-lg px-4 py-2
                     {{ request()->routeIs('admin.materials*') ? 'bg-main-bg text-white' : 'text-gray-700 hover:text-main-bg' }}">
                             Materi

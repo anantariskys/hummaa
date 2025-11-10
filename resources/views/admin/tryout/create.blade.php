@@ -11,6 +11,26 @@
             <form action="{{ route('admin.tryout.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
 
+                <!-- Event Selection - FIELD BARU -->
+                <div class="mb-4">
+                    <label for="event_id" class="block text-sm font-medium text-gray-700">
+                        Event <span class="text-red-500">*</span>
+                    </label>
+                    <select name="event_id" id="event_id" required
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        <option value="">-- Pilih Event --</option>
+                        @foreach($events as $event)
+                            <option value="{{ $event->id }}" {{ old('event_id') == $event->id ? 'selected' : '' }}>
+                                {{ $event->title }} - {{ $event->subtitle }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="mt-1 text-xs text-gray-500">Pilih event yang akan menampilkan tryout ini di halaman user</p>
+                    @error('event_id')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 <!-- Judul -->
                 <div class="mb-4">
                     <label for="title" class="block text-sm font-medium text-gray-700">Judul</label>
@@ -35,9 +55,9 @@
                 <!-- Durasi (menit) -->
                 <div class="mb-4">
                     <label for="duration" class="block text-sm font-medium text-gray-700">Durasi (menit)</label>
-                    <input type="number" name="duration_minutes" id="duration" value="{{ old('duration') }}" required
+                    <input type="number" name="duration_minutes" id="duration" value="{{ old('duration_minutes') }}" required
                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                    @error('duration')
+                    @error('duration_minutes')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
