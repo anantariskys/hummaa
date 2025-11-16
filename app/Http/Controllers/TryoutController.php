@@ -7,6 +7,7 @@ use App\Models\Tryout;
 use App\Models\TryoutAttempt;
 use App\Models\UserAnswer;
 use App\Models\Question;
+use App\Models\EventRegistration;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -19,40 +20,85 @@ class TryoutController extends Controller
      */
     public function index()
     {
+        $user = Auth::user();
+        
         // Ambil semua events yang memiliki tryout terhubung
         $tryouts = Events::with(['tryout' => function($query) {
                             $query->with('questions');
                         }])
-                        ->whereHas('tryout') // Filter: hanya events yang punya tryout
+                        ->whereHas('tryout')
                         ->orderBy('created_at', 'desc')
-                        ->get();
-
-        // Debug: Uncomment untuk troubleshooting
-        // dd($tryouts);
+                        ->get()
+                        ->map(function($event) use ($user) {
+                            // Tambahkan status pendaftaran ke setiap event
+                            $event->is_registered = $event->isRegisteredBy($user->id);
+                            return $event;
+                        });
 
         return view('tryout.tryout-landing-page', compact('tryouts'));
     }
 
     /**
-     * Memulai sesi tryout, membuat attempt, dan menampilkan halaman soal.
-     * VALIDASI: User hanya bisa mengerjakan tryout 1x
+     * ========== METHOD BARU: PENDAFTARAN EVENT ==========
      */
+    
+    /**
+     * Mendaftarkan user ke event tryout
+     */
+    public function registerEvent(Request $request, $event_id)
+    {
+        $user = Auth::user();
+        $event = Events::findOrFail($event_id);
+
+        // Cek apakah sudah terdaftar
+        if ($event->isRegisteredBy($user->id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda sudah terdaftar untuk event ini.',
+            ], 400);
+        }
+
+        try {
+            // Buat pendaftaran
+            EventRegistration::create([
+                'user_id' => $user->id,
+                'event_id' => $event_id,
+                'registered_at' => now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Berhasil mendaftar event! Tryout sekarang tersedia di Bank Soal.',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Gagal mendaftar event: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat mendaftar. Silakan coba lagi.',
+            ], 500);
+        }
+    }
+
+    /**
+     * ========== METHOD LAMA TETAP ADA ==========
+     */
+
     public function start($tryout_id)
     {
         $tryout = Tryout::findOrFail($tryout_id);
         $user = Auth::user();
 
-        // // CEK APAKAH USER SUDAH PERNAH MENGERJAKAN TRYOUT INI
-        // $existingAttempt = TryoutAttempt::where('user_id', $user->id)
-        //     ->where('tryout_id', $tryout->tryout_id)
-        //     ->where('status', 'submitted')
-        //     ->first();
-
-        // if ($existingAttempt) {
-        //     return redirect()
-        //         ->route('bank-soal.index')
-        //         ->with('error', 'Anda sudah pernah mengerjakan tryout ini. Silakan gunakan Mode Belajar untuk mengulang.');
-        // }
+        // CEK APAKAH USER SUDAH MENDAFTAR EVENT INI
+        if ($tryout->event_id) {
+            $event = Events::findOrFail($tryout->event_id);
+            
+            if (!$event->isRegisteredBy($user->id)) {
+                return redirect()
+                    ->route('tryout.index')
+                    ->with('error', 'Anda harus mendaftar event terlebih dahulu untuk mengakses tryout ini.');
+            }
+        }
 
         $attempt = TryoutAttempt::create([
             'user_id' => $user->id,
@@ -97,9 +143,6 @@ class TryoutController extends Controller
         ]);
     }
 
-    /**
-     * Menerima dan memproses jawaban dari pengguna.
-     */
     public function submit(Request $request, $attempt_id)
     {
         $request->validate([
@@ -182,9 +225,6 @@ class TryoutController extends Controller
         }
     }
 
-    /**
-     * Menampilkan hasil tryout.
-     */
     public function showResult($attempt_id)
     {
         $attempt = TryoutAttempt::with('tryout')->findOrFail($attempt_id);
@@ -198,9 +238,6 @@ class TryoutController extends Controller
         ]);
     }
 
-    /**
-     * Review mode - melihat jawaban yang sudah dikerjakan.
-     */
     public function review($tryout_id)
     {
         $user = Auth::user();
@@ -274,16 +311,11 @@ class TryoutController extends Controller
         ]);
     }
 
-    /**
-     * Learning mode - mengerjakan soal tanpa menyimpan jawaban.
-     * VALIDASI: User HARUS sudah pernah mengerjakan tryout dulu
-     */
     public function startLearningMode($tryout_id)
     {
         $user = Auth::user();
         $tryout = Tryout::with(['questions.options', 'questions.questionType'])->findOrFail($tryout_id);
 
-        // CEK APAKAH USER SUDAH PERNAH MENGERJAKAN TRYOUT INI
         $existingAttempt = TryoutAttempt::where('user_id', $user->id)
             ->where('tryout_id', $tryout->tryout_id)
             ->where('status', 'submitted')
@@ -330,9 +362,6 @@ class TryoutController extends Controller
         ]);
     }
 
-    /**
-     * Menampilkan riwayat pengerjaan tryout.
-     */
     public function showHistory($tryout_id)
     {
         $tryout = Tryout::findOrFail($tryout_id);
