@@ -22,7 +22,8 @@ class AdminTryoutController extends Controller
     {
         $search = $request->input('search');
 
-        $query = Tryout::with('category');
+        // TAMBAHKAN 'event' ke eager loading
+        $query = Tryout::with(['category', 'event']);
         
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -52,7 +53,7 @@ class AdminTryoutController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'event_id' => 'required|exists:events,id',
+            'event_id' => 'nullable|exists:events,id', // UBAH: required → nullable
             'title' => 'required|string|max:255',
             'year' => 'required|integer|min:' . date('Y'),
             'duration_minutes' => 'required|integer|min:1',
@@ -60,16 +61,21 @@ class AdminTryoutController extends Controller
         ]);
 
         $tryout = Tryout::create([
-            'event_id' => $request->event_id, // TAMBAHKAN INI - PENTING!
+            'event_id' => $request->event_id ?: null, // Pastikan kosong jadi NULL
             'title' => $request->title,
             'year' => $request->year,
             'duration_minutes' => $request->duration_minutes,
             'category_id' => $request->category_id,
         ]);
 
+        // Pesan dinamis berdasarkan ada event atau tidak
+        $message = $request->event_id 
+            ? 'Try Out berhasil ditambahkan dan terhubung dengan event!' 
+            : 'Try Out berhasil ditambahkan sebagai draft (belum terhubung event).';
+
         return redirect()
             ->route('admin.tryout.show', $tryout->tryout_id)
-            ->with('success', 'Try Out berhasil ditambahkan dan terhubung dengan event!');
+            ->with('success', $message);
     }
 
     /**
@@ -96,10 +102,10 @@ class AdminTryoutController extends Controller
     public function edit($tryout_id)
     {
         $tryout = Tryout::where('tryout_id', $tryout_id)->firstOrFail();
-        $events = Events::orderBy('created_at', 'desc')->get(); // TAMBAHKAN INI
+        $events = Events::orderBy('created_at', 'desc')->get();
         $categories = QuestionBankCategory::all();
         
-        return view('admin.tryout.edit', compact('tryout', 'events', 'categories')); // TAMBAHKAN 'events'
+        return view('admin.tryout.edit', compact('tryout', 'events', 'categories'));
     }
 
     /**
@@ -108,7 +114,7 @@ class AdminTryoutController extends Controller
     public function update(Request $request, $tryout_id)
     {
         $request->validate([
-            'event_id' => 'required|exists:events,id', // TAMBAHKAN VALIDASI INI
+            'event_id' => 'nullable|exists:events,id', // UBAH: required → nullable
             'title' => 'required|string|max:255',
             'year' => 'required|integer|min:' . date('Y'),
             'duration_minutes' => 'required|integer|min:1',
@@ -118,7 +124,7 @@ class AdminTryoutController extends Controller
         $tryout = Tryout::where('tryout_id', $tryout_id)->firstOrFail();
         
         $tryout->update([
-            'event_id' => $request->event_id, // TAMBAHKAN INI - PENTING!
+            'event_id' => $request->event_id ?: null, // Pastikan kosong jadi NULL
             'title' => $request->title,
             'year' => $request->year,
             'duration_minutes' => $request->duration_minutes,
@@ -178,13 +184,12 @@ class AdminTryoutController extends Controller
         // Get question type to check if multiple choice
         $questionType = QuestionType::find($request->question_type_id);
         
-        // Add validation - sesuaikan dengan nilai di database: "multiple_choice" dan "essay"
+        // Add validation
         if ($questionType && $questionType->type === 'multiple_choice') {
             $rules['options'] = 'required|array|min:2';
             $rules['options.*.option_text'] = 'required|string';
             $rules['options.*.is_correct'] = 'required|boolean';
         } else if ($questionType && $questionType->type === 'essay') {
-            // Untuk essay, kunci jawaban wajib diisi
             $rules['correct_answer_text'] = 'required|string';
         }
         
@@ -193,7 +198,6 @@ class AdminTryoutController extends Controller
         DB::beginTransaction();
         
         try {
-            // Create question data dengan category_id dari tryout
             $questionData = [
                 'question_text' => $validated['question_text'],
                 'question_type_id' => $validated['question_type_id'],
@@ -203,10 +207,8 @@ class AdminTryoutController extends Controller
                 'correct_answer_text' => $validated['correct_answer_text'] ?? null,
             ];
             
-            // Create the question
             $question = Question::create($questionData);
             
-            // Create options for multiple choice
             if ($questionType && $questionType->type === 'multiple_choice' && isset($validated['options'])) {
                 foreach ($validated['options'] as $option) {
                     Option::create([
@@ -217,7 +219,6 @@ class AdminTryoutController extends Controller
                 }
             }
             
-            // Create pivot record in tryout_questions
             TryoutQuestion::create([
                 'tryout_id' => $tryout->tryout_id,
                 'question_id' => $question->question_id,
@@ -248,14 +249,11 @@ class AdminTryoutController extends Controller
         $tryout = Tryout::with('category')->where('tryout_id', $tryout_id)->firstOrFail();
         $question = Question::where('question_id', $question_id)->with('options')->firstOrFail();
         
-        // Get question number from pivot table
         $tryoutQuestion = TryoutQuestion::where('tryout_id', $tryout->tryout_id)
             ->where('question_id', $question->question_id)
             ->first();
         
         $questionNumber = $tryoutQuestion ? $tryoutQuestion->question_number : 1;
-        
-        // Get question types
         $questionTypes = QuestionType::all();
         
         return view('admin.tryout.questions.edit', compact('tryout', 'question', 'questionNumber', 'questionTypes'));
@@ -277,16 +275,13 @@ class AdminTryoutController extends Controller
             'image_url' => 'nullable|url',
         ];
         
-        // Get question type to check if multiple choice
         $questionType = QuestionType::find($request->question_type_id);
         
-        // Add validation - sesuaikan dengan nilai di database: "multiple_choice" dan "essay"
         if ($questionType && $questionType->type === 'multiple_choice') {
             $rules['options'] = 'required|array|min:2';
             $rules['options.*.option_text'] = 'required|string';
             $rules['options.*.is_correct'] = 'required|boolean';
         } else if ($questionType && $questionType->type === 'essay') {
-            // Untuk essay, kunci jawaban wajib diisi
             $rules['correct_answer_text'] = 'required|string';
         }
         
@@ -295,7 +290,6 @@ class AdminTryoutController extends Controller
         DB::beginTransaction();
         
         try {
-            // Update question data dengan category_id dari tryout
             $question->update([
                 'question_text' => $validated['question_text'],
                 'question_type_id' => $validated['question_type_id'],
@@ -305,12 +299,9 @@ class AdminTryoutController extends Controller
                 'correct_answer_text' => $validated['correct_answer_text'] ?? null,
             ]);
             
-            // Update options for multiple choice
             if ($questionType && $questionType->type === 'multiple_choice' && isset($validated['options'])) {
-                // Delete old options
                 Option::where('question_id', $question->question_id)->delete();
                 
-                // Create new options
                 foreach ($validated['options'] as $option) {
                     Option::create([
                         'question_id' => $question->question_id,
@@ -319,11 +310,9 @@ class AdminTryoutController extends Controller
                     ]);
                 }
             } else {
-                // Clear options if changed to essay
                 Option::where('question_id', $question->question_id)->delete();
             }
             
-            // Update question number in pivot table
             TryoutQuestion::where('tryout_id', $tryout->tryout_id)
                 ->where('question_id', $question->question_id)
                 ->update(['question_number' => $validated['question_number']]);
@@ -355,16 +344,13 @@ class AdminTryoutController extends Controller
         DB::beginTransaction();
         
         try {
-            // Delete pivot record
             TryoutQuestion::where('tryout_id', $tryout->tryout_id)
                 ->where('question_id', $question->question_id)
                 ->delete();
             
-            // Check if question is used in other tryouts
             $usedInOtherTryouts = TryoutQuestion::where('question_id', $question->question_id)
                 ->exists();
             
-            // If not used anywhere else, delete the question and its options
             if (!$usedInOtherTryouts) {
                 Option::where('question_id', $question->question_id)->delete();
                 $question->delete();

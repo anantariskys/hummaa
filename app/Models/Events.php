@@ -31,4 +31,31 @@ class Events extends Model
     {
         return $this->hasOne(Tryout::class, 'event_id', 'id');
     }
+
+    /**
+ * Relasi many-to-many dengan Users melalui event_registrations
+ */
+public function registeredUsers()
+{
+    return $this->belongsToMany(User::class, 'event_registrations', 'event_id', 'user_id')
+                ->withTimestamps()
+                ->withPivot('registered_at');
+}
+
+/**
+ * Cek apakah user tertentu sudah mendaftar event ini
+ */
+public function isRegisteredBy($userId): bool
+{
+    return $this->registeredUsers()->where('user_id', $userId)->exists();
+}
+
+/**
+ * Hitung total peserta yang sudah mendaftar
+ */
+public function getTotalRegistrantsAttribute(): int
+{
+    return $this->registeredUsers()->count();
+}
+
 }

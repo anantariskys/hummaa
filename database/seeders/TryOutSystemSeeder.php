@@ -11,19 +11,7 @@ class TryOutSystemSeeder extends Seeder
 {
     public function run()
     {
-        // OPTIONAL: Clear existing data (uncomment jika ingin reset semua)
-        // echo "Clearing existing data...\n";
-        // DB::table('discussion_commentar')->truncate();
-        // DB::table('discussions')->truncate();
-        // DB::table('user_answers')->truncate();
-        // DB::table('tryout_attempts')->truncate();
-        // DB::table('tryout_questions')->truncate();
-        // DB::table('options')->truncate();
-        // DB::table('questions')->truncate();
-        // DB::table('tryouts')->truncate();
-        // DB::table('materi')->truncate();
-        // DB::table('users')->where('id', '>', 3)->delete(); // Keep existing users
-        
+ 
         // 1. SEED USERS (Admin & Peserta) - Skip if exists
         echo "Seeding Users...\n";
         $users = [

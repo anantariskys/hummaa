@@ -138,4 +138,22 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $query->whereNotNull('email_verified_at');
     }
+
+    /**
+ * Relasi many-to-many dengan Events melalui event_registrations
+ */
+public function registeredEvents()
+{
+    return $this->belongsToMany(Events::class, 'event_registrations', 'user_id', 'event_id')
+                ->withTimestamps()
+                ->withPivot('registered_at');
+}
+
+/**
+ * Cek apakah user sudah mendaftar event tertentu
+ */
+public function hasRegisteredEvent($eventId): bool
+{
+    return $this->registeredEvents()->where('event_id', $eventId)->exists();
+}
 }
